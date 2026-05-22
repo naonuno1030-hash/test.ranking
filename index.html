@@ -3431,16 +3431,23 @@ if ('speechSynthesis' in window) {
 // ═══════════════════════════════════════════════════════════
 window._nickName = localStorage.getItem('spk_nick') || '';
 
+function showNickMsg(msg, color) {
+  const el = document.getElementById('nickSaved');
+  if (el) { el.textContent = msg; el.style.color = color || ''; setTimeout(() => { el.textContent = ''; }, 4000); }
+}
+
 function saveScoreToFirebase(level, day, title, score, lang) {
   const nick = window._nickName;
-  if (!nick) return;  // ニックネーム未入力はスキップ
+  if (!nick) { showNickMsg('⚠️ ニックネームを入力してください', 'orange'); return; }
 
   const doSave = () => {
     const db  = window._fbDb;
     const ref = window._fbRef;
     const get = window._fbGet;
     const set = window._fbSet;
-    if (!db) return;
+    if (!db) { showNickMsg('⚠️ Firebase未接続', 'orange'); return; }
+
+    showNickMsg('送信中...', '');
 
     const key     = `scores/${nick.replace(/[.#$[\]]/g,'_')}`;
     const dayKey  = `${level}_day${day}`;
@@ -3454,13 +3461,12 @@ function saveScoreToFirebase(level, day, title, score, lang) {
         data.nick      = nick;
         data.updatedAt = Date.now();
         set(nodeRef, data)
-          .then(() => {
-            const el = document.getElementById('nickSaved');
-            if (el) { el.textContent = '✅ 保存'; setTimeout(() => { el.textContent = ''; }, 2000); }
-          })
-          .catch(err => console.warn('Firebase save error:', err));
+          .then(() => { showNickMsg('✅ 保存しました！', ''); })
+          .catch(err => { showNickMsg('❌ 保存失敗: ' + (err.code||err.message), 'red'); console.error('Firebase set error:', err); });
+      } else {
+        showNickMsg('（最高記録は ' + prev + '点です）', '');
       }
-    }).catch(err => console.warn('Firebase get error:', err));
+    }).catch(err => { showNickMsg('❌ 読込失敗: ' + (err.code||err.message), 'red'); console.error('Firebase get error:', err); });
   };
 
   if (window._fbReady) {
@@ -3469,7 +3475,6 @@ function saveScoreToFirebase(level, day, title, score, lang) {
     window.addEventListener('fbReady', doSave, { once: true });
   }
 }
-
 // ページ読み込み時にニックネームを復元
 window.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('spk_nick');
