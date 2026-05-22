@@ -314,69 +314,13 @@ body.lang-zh .cc-roma  { font-size:.62rem; color:var(--tx3); opacity:.5; }
     const app = initializeApp(firebaseConfig);
     const db  = getDatabase(app);
 
-    // グローバルに公開（通常スクリプトから呼べるように）
     window._fbDb  = db;
     window._fbRef = ref;
     window._fbGet = get;
     window._fbSet = set;
     window._fbReady = true;
     window.dispatchEvent(new Event('fbReady'));
-  
-// ═══════════════════════════════════════════════════════════
-//  Firebase 得点保存
-// ═══════════════════════════════════════════════════════════
-window._nickName = localStorage.getItem('spk_nick') || '';
-
-function saveScoreToFirebase(level, day, title, score, lang) {
-  const nick = window._nickName;
-  if (!nick) return;  // ニックネーム未入力はスキップ
-
-  const doSave = () => {
-    const db  = window._fbDb;
-    const ref = window._fbRef;
-    const get = window._fbGet;
-    const set = window._fbSet;
-    if (!db) return;
-
-    const key     = `scores/${nick.replace(/[.#$[\]]/g,'_')}`;
-    const dayKey  = `${level}_day${day}`;
-    const nodeRef = ref(db, key);
-
-    get(nodeRef).then(snap => {
-      const data = snap.val() || { nick, days: {}, updatedAt: 0 };
-      const prev = (data.days[dayKey] && data.days[dayKey].best) || 0;
-      if (score > prev) {
-        data.days[dayKey] = { best: score, title, level, day, lang, updatedAt: Date.now() };
-        data.nick      = nick;
-        data.updatedAt = Date.now();
-        set(nodeRef, data)
-          .then(() => {
-            const el = document.getElementById('nickSaved');
-            if (el) { el.textContent = '✅ 保存'; setTimeout(() => { el.textContent = ''; }, 2000); }
-          })
-          .catch(err => console.warn('Firebase save error:', err));
-      }
-    }).catch(err => console.warn('Firebase get error:', err));
-  };
-
-  if (window._fbReady) {
-    doSave();
-  } else {
-    window.addEventListener('fbReady', doSave, { once: true });
-  }
-}
-
-// ページ読み込み時にニックネームを復元
-window.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('spk_nick');
-  if (saved) {
-    window._nickName = saved;
-    const inp = document.getElementById('nickNameInput');
-    if (inp) inp.value = saved;
-  }
-});
-
-</script>
+  </script>
 </head>
 <body class="lang-ja">
 
@@ -3480,6 +3424,61 @@ if ('speechSynthesis' in window) {
     window.speechSynthesis.getVoices(); // cache the list
   };
 }
+
+
+// ═══════════════════════════════════════════════════════════
+//  Firebase 得点保存
+// ═══════════════════════════════════════════════════════════
+window._nickName = localStorage.getItem('spk_nick') || '';
+
+function saveScoreToFirebase(level, day, title, score, lang) {
+  const nick = window._nickName;
+  if (!nick) return;  // ニックネーム未入力はスキップ
+
+  const doSave = () => {
+    const db  = window._fbDb;
+    const ref = window._fbRef;
+    const get = window._fbGet;
+    const set = window._fbSet;
+    if (!db) return;
+
+    const key     = `scores/${nick.replace(/[.#$[\]]/g,'_')}`;
+    const dayKey  = `${level}_day${day}`;
+    const nodeRef = ref(db, key);
+
+    get(nodeRef).then(snap => {
+      const data = snap.val() || { nick, days: {}, updatedAt: 0 };
+      const prev = (data.days[dayKey] && data.days[dayKey].best) || 0;
+      if (score > prev) {
+        data.days[dayKey] = { best: score, title, level, day, lang, updatedAt: Date.now() };
+        data.nick      = nick;
+        data.updatedAt = Date.now();
+        set(nodeRef, data)
+          .then(() => {
+            const el = document.getElementById('nickSaved');
+            if (el) { el.textContent = '✅ 保存'; setTimeout(() => { el.textContent = ''; }, 2000); }
+          })
+          .catch(err => console.warn('Firebase save error:', err));
+      }
+    }).catch(err => console.warn('Firebase get error:', err));
+  };
+
+  if (window._fbReady) {
+    doSave();
+  } else {
+    window.addEventListener('fbReady', doSave, { once: true });
+  }
+}
+
+// ページ読み込み時にニックネームを復元
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('spk_nick');
+  if (saved) {
+    window._nickName = saved;
+    const inp = document.getElementById('nickNameInput');
+    if (inp) inp.value = saved;
+  }
+});
 </script>
 </body>
 </html>
